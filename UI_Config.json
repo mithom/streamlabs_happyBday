@@ -1,0 +1,37 @@
+{
+  "output_file": "happyBday_settings.json",
+  "format": {
+    "type": "dropdown",
+    "label": "date format",
+    "value": "%d/%m/%Y",
+    "tooltip": "This will determine the mode.",
+    "items": [
+      "%d/%m/%Y",
+      "%m/%d/%Y",
+      "%Y/%m/%d"
+    ],
+    "group": "config"
+  },
+  "bday_cmd": {
+    "type": "textbox",
+    "label": "birthday command",
+    "value": "!birthday",
+    "tooltip": "command to be used to set birthday",
+    "group": "config"
+  },
+  "add_me": {
+    "type": "checkbox",
+    "label": "add /me",
+    "value": true,
+    "tooltip": "adds /me before each response",
+    "group": "config"
+  },
+  "reset": {
+    "type": "button",
+    "label": "Reset Database - Press 5 times in 5s",
+    "tooltip": "will remove all birthday that have been set",
+    "function": "ResetDatabase",
+    "wsevent": "",
+    "group": "reset"
+  }
+}
