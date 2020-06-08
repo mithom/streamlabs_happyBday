@@ -10,7 +10,7 @@ import clr
 clr.AddReference("IronPython.Modules.dll")
 
 import happyBday
-import SettingsModule
+import bdaySettings
 
 # ---------------------------------------
 #   [Required]  Script Information
@@ -35,10 +35,10 @@ next_tick = 0
 # ---------------------------------------
 # noinspection PyPep8Naming
 def Init():
-    global ScriptSettings, happy_bday, next_update
+    global ScriptSettings, happy_bday
     # Insert Parent in submodules
     happyBday.Parent = Parent
-    SettingsModule.Parent = Parent
+    bdaySettings.Parent = Parent
 
     #   Create Settings and db Directory
     settings_directory = os.path.join(os.path.dirname(__file__), "Settings")
@@ -50,7 +50,7 @@ def Init():
         os.makedirs(db_directory)
 
     #   Load settings
-    ScriptSettings = SettingsModule.Settings(m_settings_file, ScriptName)
+    ScriptSettings = bdaySettings.BdaySettings(m_settings_file, ScriptName)
 
     # Create game
     happy_bday = happyBday.HappyBDay(ScriptSettings, ScriptName, db_directory)
@@ -59,6 +59,7 @@ def Init():
 # noinspection PyPep8Naming
 def ReloadSettings(jsondata):
     ScriptSettings.reload(jsondata)
+    happy_bday.apply_settings()
 
 
 # noinspection PyPep8Naming
@@ -68,12 +69,12 @@ def Unload():
 
 # noinspection PyPep8Naming
 def ScriptToggle(state):
-    global next_update
-    # next_update is time remaining in tick while script is toggled off.
+    global next_tick
+    # next_tick is time remaining in tick while script is toggled off.
     if state:
-        next_update += time.time()
+        next_tick -= time.time()
     else:
-        next_update -= time.time()
+        next_tick += time.time()
 
 
 # noinspection PyPep8Naming

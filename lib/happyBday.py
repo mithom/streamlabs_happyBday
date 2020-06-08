@@ -50,8 +50,32 @@ class HappyBDay(object):
         self.script_name = script_name
         self.db_directory = db_directory
         self.session = None
+        self.id = None
+        self.access_token = None
+        self.headers = None
 
         self.prepare_db()
+        self.apply_settings()
+
+    def apply_settings(self):
+        resp = json.loads(Parent.PostRequest(
+            "https://id.twitch.tv/oauth2/token?client_id=%s&client_secret=%s&grant_type=client_credentials" % (self.scriptSettings.client_id, self.scriptSettings.client_secret),
+            {}, {}, False
+        ))
+        if resp["status"] == 200:
+            self.access_token = self.id = json.loads(resp["response"])["access_token"]
+            self.headers = {
+                "Client-ID": self.scriptSettings.client_id,
+                'Authorization': 'Bearer {0}'.format(self.access_token)
+            }
+            resp = json.loads(Parent.GetRequest("https://api.twitch.tv/helix/users?login={0}".format(Parent.GetChannelName()), self.headers))
+            if resp["status"] == 200:
+                self.id = json.loads(resp["response"])["data"][0]["id"]
+            else:
+                Parent.Error('happyBday', str(resp))
+        else:
+            Parent.Log('happyBday', str(resp))
+            Parent.Log('happyBday', 'failed to get OAuth token')
 
     @connect
     def prepare_db(self, conn):
@@ -72,15 +96,15 @@ class HappyBDay(object):
 
     def send_birthdays(self, session, conn):
         bdays = BDay.find_since_past_stream(session, conn)
-        names = map(lambda x: x.user_name, bdays)
-        Parent.SendStreamWhisper(Parent.GetChannelName(), "birthday since last stream " + ", ".join(names))
+        texts = map(lambda x: x.user_name + ": " + x.birthday.strftime(self.scriptSettings.format), bdays)
+        Parent.SendStreamWhisper(Parent.GetChannelName(), "birthdays since last stream " + ", ".join(texts))
 
     # ---------------------------------------
     #   interface functions
     # ---------------------------------------
     @connect
     def tick(self, conn):
-        if Parent.IsLive:
+        if Parent.IsLive():
             if self.session is None:
                 self.session = self.get_session(conn)
             else:
@@ -109,11 +133,11 @@ class HappyBDay(object):
     # ---------------------------------------
     @send_stream_message
     @connect
-    def set_bday(self, user_id, username, date_str, conn):
-        if self.is_follower(username):
+    def set_bday(self, user_id, username, date_str, mod=False, conn=None):
+        if self.is_follower(user_id):
             try:
                 bday = datetime.strptime(date_str, self.scriptSettings.format).date()
-                if BDay.find(user_id, conn) is None:
+                if mod or BDay.find(user_id, conn) is None:
                     BDay.create(user_id, username, bday, conn)
                     return "successfully saved your birthday, @{0}", username
                 else:
@@ -123,9 +147,8 @@ class HappyBDay(object):
         return "@{0} , please follow before saving your birthday", username
 
     def mod_set_bday(self, user_id, username, target_name, date_str):
-        Parent.SendStreamMessage(self.format_message(
-            "when you need to send multiple message, or don't want to wait until end of function to send message"
-        ))
+        if Parent.HasPermission(user_id, 'Moderator', ''):
+            self.set_bday(target_name, target_name, date_str, mod=True)
 
     # ---------------------------------------
     #   auxiliary functions
@@ -135,13 +158,22 @@ class HappyBDay(object):
             msg = "/me " + msg
         return msg.format(*args, **kwargs)
 
-    # because follower isn't a default permission in chatbot, thanks to @ocgineer for better version of decapi
-    @staticmethod
-    def is_follower(username):
-        json_data = json.loads(Parent.GetRequest(
-            "https://api.ocgineer.com/twitch/followage/{0}/{1}".format(Parent.GetChannelName(), username), {}))
-        if json_data["status"] == 200:
-            return True
+    # because follower isn't a default permission in chatbot
+    def is_follower(self, user_id):
+        resp = json.loads(
+            Parent.GetRequest("https://api.twitch.tv/helix/users?login={0}".format(user_id),
+                              self.headers))
+        if resp["status"] == 200:
+            real_user_id = json.loads(resp["response"])["data"][0]["id"]
+            json_data = json.loads(Parent.GetRequest(
+                "https://api.twitch.tv/helix/users/follows?from_id={0}&to_id={1}".format(real_user_id, self.id),
+                self.headers
+            ))
+            if json_data["status"] == 200:
+                return json.loads(json_data["response"])["total"] == 1
+            Parent.Error('happyBday', str(json_data))
+        else:
+            Parent.Error('happyBday', str(resp))
         return False
 
     def get_connection(self):
@@ -192,7 +224,7 @@ class BDay(object):
 
     @classmethod
     def create(cls, user_id, user_name, bday, conn):
-        conn.execute("""INSERT INTO birthdays (user_id, username, birthday) VALUES (?, ?, ?)""",
+        conn.execute("""INSERT OR REPLACE INTO birthdays (user_id, username, birthday) VALUES (?, ?, ?)""",
                      (user_id, user_name, bday,))
         return cls(user_id, user_name, bday, conn)
 

@@ -1,5 +1,5 @@
 {
-  "output_file": "happyBday_settings.json",
+  "output_file": "Settings/happyBday_settings.json",
   "format": {
     "type": "dropdown",
     "label": "date format",
@@ -33,5 +33,19 @@
     "function": "ResetDatabase",
     "wsevent": "",
     "group": "reset"
+  },
+  "client_id": {
+    "type": "textbox",
+    "value": "",
+    "label": "twitch Client-ID",
+    "tooltip": "create one at\r\nhttps://dev.twitch.tv/console",
+    "group": "client-ID DO NOT SHOW"
+  },
+  "client_secret": {
+    "type": "textbox",
+    "value": "",
+    "label": "twitch client_secret",
+    "tooltip": "create one at\r\nhttps://dev.twitch.tv/console",
+    "group": "client-ID DO NOT SHOW"
   }
 }

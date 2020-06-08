@@ -4,15 +4,15 @@ import codecs
 Parent = None
 
 
-class Settings(object):
+class BdaySettings(object):
     # do not use multiple instances of this version of the class, as it uses class
     # variables in order to avoid being in __dict__
     settings_file = ""
     script_name = ""
 
     def __init__(self, settings_file, script_name):
-        Settings.settings_file = settings_file
-        Settings.script_name = script_name
+        BdaySettings.settings_file = settings_file
+        BdaySettings.script_name = script_name
         try:
             with codecs.open(self.settings_file, encoding="utf-8-sig", mode="r") as f:
                 self.__dict__ = json.load(f, encoding="utf-8")
@@ -21,6 +21,8 @@ class Settings(object):
             self.format = "%d/%m/%Y"
             self.bday_cmd = '!birthday'
             self.add_me = True
+            self.client_id = ""
+            self.client_secret = ""
 
     def reload(self, json_data):
         """ Reload settings from Chatbot user interface by given json data. """
